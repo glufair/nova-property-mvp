@@ -16,6 +16,7 @@ interface AnalysisResult {
   totalCashIn: number;
   monthlyInterest: number;
   otherMonthlyCosts: number;
+  aiSummary?: string;
 }
 
 export default function Home() {
@@ -187,7 +188,7 @@ export default function Home() {
             disabled={loading}
             className="w-full bg-blue-600 text-white rounded py-2 text-sm font-medium"
           >
-            {loading ? "Analysing..." : "Analyse deal"}
+            {loading ? "Analysing..." : "Analyse deal (with AI view)"}
           </button>
         </form>
 
@@ -198,7 +199,7 @@ export default function Home() {
         )}
 
         {result && (
-          <div className="border border-slate-200 rounded p-3 space-y-2">
+          <div className="border border-slate-200 rounded p-3 space-y-3">
             <div className="text-sm">
               <strong>Purchase price:</strong> £
               {result.purchasePrice.toLocaleString()}
@@ -225,7 +226,9 @@ export default function Home() {
             <div className="text-sm">
               <strong>Assumed monthly interest:</strong> £
               {result.monthlyInterest.toFixed(0)} ·{" "}
-              <strong>Other monthly costs ({result.expensePercent} percent of rent):</strong>{" "}
+              <strong>
+                Other monthly costs ({result.expensePercent} percent of rent):
+              </strong>{" "}
               £{result.otherMonthlyCosts.toFixed(0)}
             </div>
             <div className="text-sm">
@@ -233,8 +236,21 @@ export default function Home() {
               {result.netMonthlyCashflow.toFixed(0)}
             </div>
             <div className="text-sm text-slate-700 mt-1">
-              <strong>Summary:</strong> {result.summary}
+              <strong>Rule-based summary:</strong> {result.summary}
             </div>
+
+            {result.aiSummary && (
+              <div className="mt-3 border-t pt-2">
+                <div className="text-sm font-semibold mb-1">
+                  AI view of this deal
+                </div>
+                <div className="prose prose-sm max-w-none text-sm">
+                  {result.aiSummary.split("\n").map((line, idx) => (
+                    <p key={idx}>{line}</p>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

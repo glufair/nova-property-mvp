@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import OpenAI from "openai";
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
 
 type Result = {
   purchasePrice: number;
@@ -14,6 +19,7 @@ type Result = {
   totalCashIn: number;
   monthlyInterest: number;
   otherMonthlyCosts: number;
+  aiSummary?: string;
 };
 
 export async function POST(
@@ -95,6 +101,62 @@ export async function POST(
         "On these numbers the deal is likely to be cashflow negative. You would need a lower purchase price, higher rent, more deposit, or a cheaper mortgage product.";
     }
 
+    let aiSummary: string | undefined;
+
+    if (process.env.OPENAI_API_KEY) {
+      try {
+        const prompt = `
+You are an experienced UK residential property investment analyst.
+
+Use British English spelling.
+
+You are given deal inputs. Provide:
+- Two short paragraphs explaining the deal in plain language.
+- A short bullet list of 3 pros and 3 cons.
+
+Deal inputs:
+- Purchase price: £${price.toFixed(0)}
+- Monthly rent: £${monthlyRent.toFixed(0)}
+- Deposit: ${depositPercent.toFixed(1)} percent
+- Interest rate: ${interestRate.toFixed(2)} percent (interest-only)
+- Refurb: £${refurb.toFixed(0)}
+- SDLT: £${sdlt.toFixed(0)}
+- Operating costs: ${expensePercent.toFixed(1)} percent of rent
+- Total cash in: £${totalCashIn.toFixed(0)}
+- Gross yield: ${grossYield.toFixed(2)} percent
+- Net monthly cashflow (estimate): £${netMonthlyCashflow.toFixed(0)}
+
+Focus on:
+- Whether this is likely to be a sensible buy to let on these assumptions.
+- Sensitivity to interest rate changes and voids.
+- Any obvious red flags or things the investor should double-check (area demand, condition, lease details, etc).
+        `.trim();
+
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are a concise, numerate UK property investment analyst. Use British English and keep the tone clear, calm and professional."
+            },
+            {
+              role: "user",
+              content: prompt
+            }
+          ],
+          temperature: 0.3,
+          max_tokens: 350
+        });
+
+        aiSummary =
+          completion.choices[0]?.message?.content?.trim() || undefined;
+      } catch (e) {
+        console.error("AI summary error:", e);
+        aiSummary = undefined;
+      }
+    }
+
     return NextResponse.json({
       purchasePrice: price,
       rent: monthlyRent,
@@ -108,7 +170,8 @@ export async function POST(
       expensePercent,
       totalCashIn,
       monthlyInterest,
-      otherMonthlyCosts
+      otherMonthlyCosts,
+      aiSummary
     });
   } catch (err) {
     console.error(err);

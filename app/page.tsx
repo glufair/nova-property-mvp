@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { FormEvent, useState } from "react";
 
 interface AnalysisResult {
   purchasePrice: number;
@@ -8,17 +8,30 @@ interface AnalysisResult {
   grossYield: number;
   netMonthlyCashflow: number;
   summary: string;
+  depositPercent: number;
+  interestRate: number;
+  refurb: number;
+  sdlt: number;
+  expensePercent: number;
+  totalCashIn: number;
+  monthlyInterest: number;
+  otherMonthlyCosts: number;
 }
 
 export default function Home() {
   const [url, setUrl] = useState("");
   const [price, setPrice] = useState("");
   const [rent, setRent] = useState("");
+  const [depositPercent, setDepositPercent] = useState("25");
+  const [interestRate, setInterestRate] = useState("5.5");
+  const [refurb, setRefurb] = useState("0");
+  const [sdlt, setSdlt] = useState("");
+  const [expensePercent, setExpensePercent] = useState("15");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
@@ -31,7 +44,12 @@ export default function Home() {
         body: JSON.stringify({
           url,
           purchasePrice: Number(price),
-          rent: Number(rent)
+          rent: Number(rent),
+          depositPercent: Number(depositPercent),
+          interestRate: Number(interestRate),
+          refurb: Number(refurb),
+          sdlt: sdlt === "" ? null : Number(sdlt),
+          expensePercent: Number(expensePercent)
         })
       });
 
@@ -40,7 +58,7 @@ export default function Home() {
         throw new Error(data.error || "Something went wrong");
       }
 
-      const data = await res.json();
+      const data = (await res.json()) as AnalysisResult;
       setResult(data);
     } catch (err: any) {
       setError(err.message || "Error analysing deal");
@@ -50,7 +68,7 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-centre bg-slate-100">
+    <main className="min-h-screen flex items-center justify-center bg-slate-100">
       <div className="w-full max-w-xl bg-white shadow-lg rounded-xl p-6 space-y-4">
         <h1 className="text-xl font-semibold">
           UK Property Deal Quick Analyser
@@ -99,6 +117,71 @@ export default function Home() {
             </div>
           </div>
 
+          <div className="flex space-x-2">
+            <div className="w-1/2">
+              <label className="block text-sm font-medium mb-1">
+                Deposit (% of purchase)
+              </label>
+              <input
+                type="number"
+                value={depositPercent}
+                onChange={e => setDepositPercent(e.target.value)}
+                className="w-full border rounded px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="w-1/2">
+              <label className="block text-sm font-medium mb-1">
+                Interest rate (percent, interest-only)
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                value={interestRate}
+                onChange={e => setInterestRate(e.target.value)}
+                className="w-full border rounded px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
+
+          <div className="flex space-x-2">
+            <div className="w-1/2">
+              <label className="block text-sm font-medium mb-1">
+                Refurb (£)
+              </label>
+              <input
+                type="number"
+                value={refurb}
+                onChange={e => setRefurb(e.target.value)}
+                className="w-full border rounded px-3 py-2 text-sm"
+              />
+            </div>
+
+            <div className="w-1/2">
+              <label className="block text-sm font-medium mb-1">
+                SDLT (£)
+              </label>
+              <input
+                type="number"
+                value={sdlt}
+                onChange={e => setSdlt(e.target.value)}
+                className="w-full border rounded px-3 py-2 text-sm"
+                placeholder="Optional or 0"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Operating costs (% of rent)
+            </label>
+            <input
+              type="number"
+              value={expensePercent}
+              onChange={e => setExpensePercent(e.target.value)}
+              className="w-full border rounded px-3 py-2 text-sm"
+            />
+          </div>
+
           <button
             type="submit"
             disabled={loading}
@@ -124,8 +207,26 @@ export default function Home() {
               <strong>Rent:</strong> £{result.rent.toLocaleString()} per month
             </div>
             <div className="text-sm">
+              <strong>Deposit:</strong> {result.depositPercent} percent at{" "}
+              {result.interestRate} percent interest-only
+            </div>
+            <div className="text-sm">
+              <strong>Refurb:</strong> £{result.refurb.toLocaleString()}{" "}
+              · <strong>SDLT:</strong> £{result.sdlt.toLocaleString()}
+            </div>
+            <div className="text-sm">
+              <strong>Total cash in (deposit + refurb + SDLT):</strong> £
+              {result.totalCashIn.toLocaleString()}
+            </div>
+            <div className="text-sm">
               <strong>Gross yield:</strong>{" "}
               {result.grossYield.toFixed(2)} percent
+            </div>
+            <div className="text-sm">
+              <strong>Assumed monthly interest:</strong> £
+              {result.monthlyInterest.toFixed(0)} ·{" "}
+              <strong>Other monthly costs ({result.expensePercent} percent of rent):</strong>{" "}
+              £{result.otherMonthlyCosts.toFixed(0)}
             </div>
             <div className="text-sm">
               <strong>Net monthly cashflow (estimate):</strong> £

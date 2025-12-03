@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import { calculateLimitedCompanySdlt } from "../../lib/sdlt";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -58,8 +59,8 @@ export async function POST(
     const refurb =
       typeof body.refurb === "number" && body.refurb > 0 ? body.refurb : 0;
 
-    const sdlt =
-      typeof body.sdlt === "number" && body.sdlt > 0 ? body.sdlt : 0;
+    const sdltInput =
+      typeof body.sdlt === "number" && body.sdlt > 0 ? body.sdlt : undefined;
 
     const expensePercent =
       typeof body.expensePercent === "number" && body.expensePercent > 0
@@ -82,6 +83,8 @@ export async function POST(
 
     const totalMonthlyCosts = monthlyInterest + otherMonthlyCosts;
     const netMonthlyCashflow = monthlyRent - totalMonthlyCosts;
+
+    const sdlt = sdltInput ?? calculateLimitedCompanySdlt(price);
 
     const totalCashIn = depositAmount + refurb + sdlt;
 
@@ -133,7 +136,7 @@ Focus on:
         `.trim();
 
         const completion = await openai.chat.completions.create({
-          model: "gpt-4o-mini",
+          model: "gpt-5-mini",
           messages: [
             {
               role: "system",
@@ -145,8 +148,7 @@ Focus on:
               content: prompt
             }
           ],
-          temperature: 0.3,
-          max_tokens: 350
+          temperature: 0.3
         });
 
         aiSummary =

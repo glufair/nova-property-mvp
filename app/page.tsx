@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { calculateLimitedCompanySdlt } from "./lib/sdlt";
 
 interface AnalysisResult {
   purchasePrice: number;
@@ -26,11 +27,12 @@ export default function Home() {
   const [depositPercent, setDepositPercent] = useState("25");
   const [interestRate, setInterestRate] = useState("5.5");
   const [refurb, setRefurb] = useState("0");
-  const [sdlt, setSdlt] = useState("");
   const [expensePercent, setExpensePercent] = useState("15");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const computedSdlt = calculateLimitedCompanySdlt(Number(price) || 0);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -49,7 +51,7 @@ export default function Home() {
           depositPercent: Number(depositPercent),
           interestRate: Number(interestRate),
           refurb: Number(refurb),
-          sdlt: sdlt === "" ? null : Number(sdlt),
+          sdlt: computedSdlt,
           expensePercent: Number(expensePercent)
         })
       });
@@ -61,8 +63,9 @@ export default function Home() {
 
       const data = (await res.json()) as AnalysisResult;
       setResult(data);
-    } catch (err: any) {
-      setError(err.message || "Error analysing deal");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Error analysing deal";
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -156,19 +159,6 @@ export default function Home() {
                 className="w-full border rounded px-3 py-2 text-sm"
               />
             </div>
-
-            <div className="w-1/2">
-              <label className="block text-sm font-medium mb-1">
-                SDLT (£)
-              </label>
-              <input
-                type="number"
-                value={sdlt}
-                onChange={e => setSdlt(e.target.value)}
-                className="w-full border rounded px-3 py-2 text-sm"
-                placeholder="Optional or 0"
-              />
-            </div>
           </div>
 
           <div>
@@ -181,6 +171,11 @@ export default function Home() {
               onChange={e => setExpensePercent(e.target.value)}
               className="w-full border rounded px-3 py-2 text-sm"
             />
+          </div>
+
+          <div className="text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded p-2">
+            <strong>Limited company SDLT estimate:</strong> £
+            {computedSdlt.toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </div>
 
           <button
